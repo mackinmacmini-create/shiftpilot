@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/server";
+import { inQuietHours } from "@/lib/notifications/quiet-hours";
 
 /**
  * /api/notifications/dispatch — cron-triggered reminder dispatcher.
@@ -49,26 +50,6 @@ function authorize(req: NextRequest): NextResponse | null {
 
 const ONESIGNAL_APP_ID = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
 const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
-
-/**
- * True when `current` (HH:MM) falls inside [start, end].
- * Handles overnight wrap-around: e.g. quiet hours 22:00 → 06:00 covers 23:30.
- * Exported via shared helper for unit tests.
- */
-export function inQuietHours(
-  current: string,
-  start: string | null | undefined,
-  end: string | null | undefined
-): boolean {
-  if (!start || !end) return false;
-  if (start === end) return false;
-  if (start < end) {
-    // Same-day window (e.g. 12:00 → 14:00)
-    return current >= start && current <= end;
-  }
-  // Wrap-around window (e.g. 22:00 → 06:00)
-  return current >= start || current <= end;
-}
 
 type PushOutcome =
   | { ok: true; provider: "onesignal"; recipients: number }

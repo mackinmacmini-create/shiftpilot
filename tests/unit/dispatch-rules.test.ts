@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { inQuietHours } from "@/app/api/notifications/dispatch/route";
+import { inQuietHours } from "@/lib/notifications/quiet-hours";
 
 /**
- * Pure-logic tests for dispatcher rules. `inQuietHours` is exported from the
- * route module so test + production behavior cannot drift.
+ * Pure-logic tests for dispatcher rules. `inQuietHours` lives in a shared lib
+ * module so the route file only exports HTTP method handlers (Next.js req).
  */
 
 function withinWindowBucket(
