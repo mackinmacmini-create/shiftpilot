@@ -2,15 +2,20 @@ import { createClient } from "@/lib/supabase/server";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatCents, payRatePerHour, durationMinutes, formatMinutes, DOW_LABELS } from "@/lib/utils";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { StationChart, DowChart } from "./charts";
+
+type EarningRow = {
+  gross_cents: number;
+  tips_cents: number;
+  start_at: string;
+  end_at: string;
+  worked_at: string;
+  station: { code?: string; name?: string; platform?: string } | null;
+};
+
+type OppRow = {
+  outcome: string | null;
+};
 
 async function getAnalyticsData(userId: string) {
   const supabase = await createClient();
@@ -29,7 +34,10 @@ async function getAnalyticsData(userId: string) {
       .limit(500),
   ]);
 
-  return { earnings: earnings ?? [], opps: opps ?? [] };
+  return {
+    earnings: (earnings ?? []) as unknown as EarningRow[],
+    opps: (opps ?? []) as unknown as OppRow[],
+  };
 }
 
 export default async function AnalyticsPage() {
@@ -40,8 +48,8 @@ export default async function AnalyticsPage() {
   // By-station aggregation
   const stationMap = new Map<string, { name: string; gross: number; tips: number; minutes: number; count: number }>();
   for (const e of earnings) {
-    const key = (e.station as { name?: string; code?: string } | null)?.code ?? "No station";
-    const name = (e.station as { name?: string } | null)?.name ?? "No station";
+    const key = e.station?.code ?? "No station";
+    const name = e.station?.name ?? "No station";
     const prev = stationMap.get(key) ?? { name, gross: 0, tips: 0, minutes: 0, count: 0 };
     stationMap.set(key, {
       name,
@@ -128,18 +136,7 @@ export default async function AnalyticsPage() {
                   <CardTitle>Total earnings by station</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={stationData} margin={{ left: -20, right: 4 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" />
-                      <XAxis dataKey="code" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "#13171c", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, fontSize: 12 }}
-                        formatter={(v: number) => [`$${v.toFixed(2)}`, "Total"]}
-                      />
-                      <Bar dataKey="total" fill="#2dd4bf" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <StationChart data={stationData} />
                 </CardContent>
               </Card>
 
@@ -172,18 +169,7 @@ export default async function AnalyticsPage() {
               <CardTitle>Earnings by day of week</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={dowData} margin={{ left: -20, right: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" />
-                  <XAxis dataKey="day" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#13171c", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, fontSize: 12 }}
-                    formatter={(v: number) => [`$${v.toFixed(2)}`, "Total"]}
-                  />
-                  <Bar dataKey="total" fill="#2dd4bf" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <DowChart data={dowData} />
             </CardContent>
           </Card>
 
